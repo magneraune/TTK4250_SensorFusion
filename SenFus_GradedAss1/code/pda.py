@@ -39,7 +39,7 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
 
         # The loop can be done using ether of these: normal loop, list comprehension or map
         # gated: some for loop over elements of Z using self.state_filter.gate
-        gated = np.full(M, True, dtype=bool)
+        gated = np.full(M, False, dtype=bool)
         """for i in range(M):
             gated[i] = self.state_filter.gate(Z[:,i], filter_state, g_squared, sensor_state=sensor_state)
         """
@@ -103,7 +103,7 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
 
         conditional_update = []
         conditional_update.append(
-            filter_state #: missed detection
+            filter_state #: missed detection 
         )
         conditional_update.extend([
             self.state_filter.update(Z[i,:], filter_state, sensor_state=sensor_state) for i in range(Z.shape[0])#: some loop over Z making a list of updates
