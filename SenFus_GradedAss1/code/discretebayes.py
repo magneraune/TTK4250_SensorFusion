@@ -12,7 +12,6 @@ def discrete_bayes(
     np.ndarray, np.ndarray
 ]:  # the new marginal and conditional: shapes=((m,), (m, n))
     """Swap which discrete variable is the marginal and conditional."""
-
     joint = cond_pr * pr[:, None]
 
     marginal = joint.sum(axis=0)
