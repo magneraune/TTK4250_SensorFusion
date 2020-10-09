@@ -18,6 +18,7 @@ import imm
 import pda
 import estimationstatistics as estats
 
+# %matplotlib inline
 # %% plot config check and style setup
 
 
@@ -36,7 +37,7 @@ if "inline" in matplotlib.get_backend():
         print("Trying to set backend to separate window:", end=" ")
         import IPython
 
-        IPython.get_ipython().run_line_magic("matplotlib", "")
+        IPython.get_ipython().run_line_magic("matplotlib", "inline")
     else:
         print("unknown inline backend")
 
@@ -195,7 +196,6 @@ for k, (Zk, x_true_k) in enumerate(zip(Z, Xgt)):
 
 x_hat = np.array([est.mean for est in tracker_estimate_list])
 prob_hat = np.array([upd.weights for upd in tracker_update_list])
-
 # calculate a performance metrics
 poserr = np.linalg.norm(x_hat[:, :2] - Xgt[:, :2], axis=0)
 velerr = np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=0)
