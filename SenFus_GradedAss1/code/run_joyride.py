@@ -120,7 +120,7 @@ if play_movie:
 # measurement model
 sigma_z = 125 #10
 clutter_intensity = 1e-5 #1e-2
-PD = 0.995 #0.8
+PD = 0.95 #0.8
 gate_size = 0.9
 
 # dynamic models
@@ -133,7 +133,7 @@ sigma_omega = 0.003#0.225#0.3
 # markov chain
 PI11 = 0.85
 PI22 = 0.92
-PI33 = 0.95
+PI33 = 0.96
 
 p10 = 0.5  # initvalue for mode probabilities
 
@@ -254,7 +254,7 @@ for i,_ in enumerate(trackers):
 
 
 # consistency
-confprob = 0.9
+confprob = 0.95
 CI2 = np.array(scipy.stats.chi2.interval(confprob, 2))
 CI4 = np.array(scipy.stats.chi2.interval(confprob, 4))
 
@@ -266,62 +266,102 @@ ANEESvel = np.mean(NEESvel)
 ANEES = np.mean(NEES)
 
 # plots
-# trajectory
-fig6, ax6 = plt.subplots(num=1, clear=True)
-ax6.plot(*Xgt.T[:2], '-', label="$ground  truth$")
+
+def create_tsk(Ts):
+    tsk = np.empty(Ts.shape)
+    val = 0.0
+    for i, element in enumerate(Ts):
+        val += element
+        tsk[i] = val
+    return tsk
+
+tsk = create_tsk(Ts)
+
+
+# trajectory for EKF-PDA
+
+fig6, ax6 = plt.subplots(1, 2, num=1, clear=True)
+ax6[0].plot(*Xgt.T[:2], '-', label="$ground  truth$")
 for i, (_, name) in enumerate(zip(trackers, names)):
-    if i == 3:
-        ax6.plot(*x_hat[i].T[:2], '--', label=name)
+    if i < 2:
+        ax6[0].plot(*x_hat[i].T[:2], '--', label=name)
 
 title = ''
 for i,(name) in enumerate(names):
+    if i < 2:
         title += name + "\n"
         title += f"RMSE(pos, vel) = ({posRMSE[i,0]:.3f}, {velRMSE[i,0]:.3f})\npeak_dev(pos, vel) = ({peak_pos_deviation[i,0]:.3f}, {peak_vel_deviation[i,0]:.3f}) \n\n"
 
 
-ax6.text(0.95, 0.01, title,
+ax6[0].text(0.95, 0.01, title,
         verticalalignment='bottom', horizontalalignment='right',
-        transform=ax6.transAxes,
+        transform=ax6[0].transAxes,
         color='black', fontsize=10  )
-ax6.set_xlim([4500, 7500])
+ax6[0].set_xlim([4500, 7500])
 
-ax6.set_title("Trajectory from different trackers", fontsize=15)
-ax6.axis("equal")
-ax6.legend(loc='upper left')
+ax6[0].set_title("Trajectory from EKF-PDA trackers", fontsize=15)
+ax6[0].axis("equal")
+ax6[0].legend(loc='upper left')
 #plt.close()
+
+# trajectory for IMM-PDA
+
+ax6[1].plot(*Xgt.T[:2], '-', label="$ground  truth$")
+for i, (_, name) in enumerate(zip(trackers, names)):
+    if i > 1:
+        ax6[1].plot(*x_hat[i].T[:2], '--', label=name)
+
+title = ''
+for i,(name) in enumerate(names):
+    if i > 1:
+        title += name + "\n"
+        title += f"RMSE(pos, vel) = ({posRMSE[i,0]:.3f}, {velRMSE[i,0]:.3f})\npeak_dev(pos, vel) = ({peak_pos_deviation[i,0]:.3f}, {peak_vel_deviation[i,0]:.3f}) \n\n"
+
+
+ax6[1].text(0.95, 0.01, title,
+        verticalalignment='bottom', horizontalalignment='right',
+        transform=ax6[1].transAxes,
+        color='black', fontsize=10  )
+ax6[1].set_xlim([4500, 7500])
+
+ax6[1].set_title("Trajectory from IMM-PDA trackers", fontsize=15)
+ax6[1].axis("equal")
+ax6[1].legend(loc='upper left')
 
 
 fig3, axs3 = plt.subplots(1, 2, num=3, clear=True)
+
 # probabilities
 two_modes = ['CV','CT']
-double = axs3[0].plot(np.arange(K) * Ts, prob_hat_double)
+double = axs3[0].plot(tsk, prob_hat_double)
 axs3[0].legend(double, two_modes)
 
 three_modes = ("CV","CT","CV")
-triple = axs3[1].plot(np.arange(K) * Ts, prob_hat_triple)
+triple = axs3[1].plot(tsk, prob_hat_triple)
 axs3[1].legend(triple, three_modes) 
 
 
 axs3[1].set_ylim([0, 1])
 axs3[1].set_ylabel("mode probability")
-axs3[1].set_xlabel("time")
+axs3[1].set_xlabel("time step k")
+
 
 # NEES
 fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
-axs4[0].plot(np.arange(K) * Ts, NEESpos)
-#axs4[0].plot([0, (K - 1) * Ts], np.repeat(CI2[None], 2, 0), "--r")
+axs4[0].plot(tsk, NEESpos)
+axs4[0].plot([0, (K - 1) * 2.5], np.repeat(CI2[None], 2, 0), "--r")
 axs4[0].set_ylabel("NEES pos")
 inCIpos = np.mean((CI2[0] <= NEESpos) * (NEESpos <= CI2[1]))
 axs4[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
 
-axs4[1].plot(np.arange(K) * Ts, NEESvel)
-#axs4[1].plot([0, (K - 1) * Ts], np.repeat(CI2[None], 2, 0), "--r")
+axs4[1].plot(tsk, NEESvel)
+axs4[1].plot([0, (K - 1) * 2.5], np.repeat(CI2[None], 2, 0), "--r")
 axs4[1].set_ylabel("NEES vel")
 inCIvel = np.mean((CI2[0] <= NEESvel) * (NEESvel <= CI2[1]))
 axs4[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
 
-axs4[2].plot(np.arange(K) * Ts, NEES)
-#axs4[2].plot([0, (K - 1) * Ts], np.repeat(CI4[None], 2, 0), "--r")
+axs4[2].plot(tsk, NEES)
+axs4[2].plot([0, (K - 1) * 2.5], np.repeat(CI4[None], 2, 0), "--r")
 axs4[2].set_ylabel("NEES")
 inCI = np.mean((CI2[0] <= NEES) * (NEES <= CI2[1]))
 axs4[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
@@ -334,13 +374,31 @@ print(f"ANEES = {ANEES:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
 
 # errors
 
-fig5, axs5 = plt.subplots(2, num=5, clear=True)
-for i, _ in enumerate(trackers):
-    axs5[0].plot(np.arange(K) * Ts, np.linalg.norm(x_hat[i,:, :2] - Xgt[:, :2], axis=1))
-    axs5[1].plot(np.arange(K) * Ts, np.linalg.norm(x_hat[i,:, 2:4] - Xgt[:, 2:4], axis=1))
+fig5, axs5 = plt.subplots(2,2, num=5, clear=True)
+for i, (_, name) in enumerate(zip(trackers, names)):
+    if i < 2:
+        axs5[0][0].plot(tsk, np.linalg.norm(x_hat[i,:, :2] - Xgt[:, :2], axis=1), label=name)
+        axs5[1][0].plot(tsk, np.linalg.norm(x_hat[i,:, 2:4] - Xgt[:, 2:4], axis=1), label=name)
+    if i >= 2:
+        axs5[0][1].plot(tsk, np.linalg.norm(x_hat[i,:, :2] - Xgt[:, :2], axis=1), label=name)
+        axs5[1][1].plot(tsk, np.linalg.norm(x_hat[i,:, 2:4] - Xgt[:, 2:4], axis=1), label=name)
 
-axs5[0].set_ylabel("position error")
-axs5[1].set_ylabel("velocity error")
+axs5[0][0].set_title("RMSE for EKF-PDAs")
+axs5[0][0].set_ylabel("position error")
+axs5[1][0].set_ylabel("velocity error")
+axs5[0][0].set_xlabel("time step k")
+axs5[1][0].set_xlabel("time step k")
+
+axs5[0][1].set_title("RMSE for IMM-PDAs")
+axs5[0][1].set_ylabel("position error")
+axs5[1][1].set_ylabel("velocity error")
+axs5[0][1].set_xlabel("time step k")
+axs5[1][1].set_xlabel("time step k")
+
+axs5[0][0].legend(loc="upper left")
+axs5[0][1].legend(loc="upper left")
+axs5[1][0].legend(loc="upper left")
+axs5[1][1].legend(loc="upper left")
 
 
 plt.show()
