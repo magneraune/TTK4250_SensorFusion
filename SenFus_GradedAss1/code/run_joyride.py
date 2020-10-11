@@ -18,6 +18,10 @@ import imm
 import pda
 import estimationstatistics as estats
 
+
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+
 # %% plot config check and style setup
 
 # %matplotlib inline
@@ -118,27 +122,39 @@ if play_movie:
 # %% IMM CV-CT model
 
 # measurement model
-sigma_z = 125 #10
-clutter_intensity = 1e-5 #1e-2
-PD = 0.95 #0.8
-gate_size = 0.9
+sigma_z = 30 #10
+clutter_intensity = 5e-6#1e-2
+PD = 0.8 #0.8
+gate_size = 4
 
 # dynamic models
-sigma_a_CV = 5 #0.5
-sigma_a_CV_high = 12
-sigma_a_CT = 10 #0.5
-sigma_omega = 0.003#0.225#0.3
+sigma_a_CV = 0.3 #0.5
+sigma_a_CV_high = 2
+sigma_a_CT = 1.5 #0.5
+sigma_omega = 0.00005#0.225#0.3
 
 
 # markov chain
-PI11 = 0.85
-PI22 = 0.92
-PI33 = 0.96
+PI11 = 0.9
+PI22 = 0.90
+PI33 = 0.90
 
-p10 = 0.5  # initvalue for mode probabilities
+p10 = 0.8  # initvalue for mode probabilities
 
 PI = np.array([[PI11, (1 - PI11)], [(1 - PI22), PI22]])
-PI_cv_ct_cvh = np.array([[PI11, (1 - PI11)/2, (1-PI11)/2], [(1 - PI22)/2, PI22, (1-PI22)/2], [(1-PI33)/2, (1-PI33)/2, PI33]])
+
+PI12 = 0.05
+PI13 = 0.05
+
+PI21 = 0.05
+PI23 = 0.05 
+
+PI31 = 0.05
+PI32 = 0.05
+
+PI_cv_ct_cvh = np.array([[PI11, PI12, PI13], [PI21, PI22, PI23], [PI31, PI32, PI33]])
+
+print(PI_cv_ct_cvh)
 
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
 
@@ -302,14 +318,29 @@ ax6[0].set_xlim([4500, 7500])
 ax6[0].set_title("Trajectory from EKF-PDA trackers", fontsize=15)
 ax6[0].axis("equal")
 ax6[0].legend(loc='upper left')
+
+
 #plt.close()
 
 # trajectory for IMM-PDA
 
 ax6[1].plot(*Xgt.T[:2], '-', label="$ground  truth$")
+
+axins = zoomed_inset_axes(ax6[1],2,loc=6)
+axins.plot(*Xgt.T[:2], '-', label="$ground  truth$")
+axins.set_title("CVh model should intervene",fontsize=7)
 for i, (_, name) in enumerate(zip(trackers, names)):
     if i > 1:
         ax6[1].plot(*x_hat[i].T[:2], '--', label=name)
+        axins.plot(*x_hat[i].T[:2], '--', label=name)
+
+
+axins.set_xlim([5750,6000])
+axins.set_ylim([1900, 2100])
+mark_inset(ax6[1], axins, loc1=2, loc2=4, fc="none", ec="0.5")
+
+plt.setp(axins, xticks=[], yticks=[])
+#hold('on')
 
 title = ''
 for i,(name) in enumerate(names):
@@ -330,13 +361,15 @@ ax6[1].legend(loc='upper left')
 
 
 fig3, axs3 = plt.subplots(1, 2, num=3, clear=True)
+axs3[0].set_title("Mode probabilities for IMM-PDA with two modes")
+axs3[1].set_title("Mode probabilities for IMM-PDA with three modes")
 
 # probabilities
 two_modes = ['CV','CT']
 double = axs3[0].plot(tsk, prob_hat_double)
 axs3[0].legend(double, two_modes)
 
-three_modes = ("CV","CT","CV")
+three_modes = ("CV","CT","CV high")
 triple = axs3[1].plot(tsk, prob_hat_triple)
 axs3[1].legend(triple, three_modes) 
 
@@ -345,10 +378,15 @@ axs3[1].set_ylim([0, 1])
 axs3[1].set_ylabel("mode probability")
 axs3[1].set_xlabel("time step k")
 
+axs3[1].annotate('strong turn caught by large noise CV model', xy=(152, 0.65), xytext=(160, 0.7), fontsize=12,
+            arrowprops=dict(facecolor='black', shrink=0.05))
+
 
 # NEES
 fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
 axs4[0].plot(tsk, NEESpos)
+print([0, (K - 1) * 2.5], np.repeat(CI2[None], 2, 0))
+
 axs4[0].plot([0, (K - 1) * 2.5], np.repeat(CI2[None], 2, 0), "--r")
 axs4[0].set_ylabel("NEES pos")
 inCIpos = np.mean((CI2[0] <= NEESpos) * (NEESpos <= CI2[1]))
