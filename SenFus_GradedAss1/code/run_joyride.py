@@ -82,7 +82,6 @@ K = loaded_data["K"].item()
 Ts = loaded_data["Ts"].squeeze()
 Xgt = loaded_data["Xgt"].T
 Z = [zk.T for zk in loaded_data["Z"].ravel()]
-
 # plot measurements close to the trajectory
 fig1, ax1 = plt.subplots(num=1, clear=True)
 
@@ -129,28 +128,28 @@ gate_size = 4
 
 # dynamic models
 sigma_a_CV = 0.3 #0.5
-sigma_a_CV_high = 2
-sigma_a_CT = 1.5 #0.5
+sigma_a_CV_high = 3
+sigma_a_CT = 2 #0.5
 sigma_omega = 0.00005#0.225#0.3
 
 
 # markov chain
-PI11 = 0.9
-PI22 = 0.90
-PI33 = 0.90
+PI11 = 0.93
+PI22 = 0.93
+PI33 = 0.93
 
 p10 = 0.8  # initvalue for mode probabilities
 
 PI = np.array([[PI11, (1 - PI11)], [(1 - PI22), PI22]])
 
-PI12 = 0.05
-PI13 = 0.05
+PI12 = 0.04
+PI13 = 0.03
 
-PI21 = 0.05
-PI23 = 0.05 
+PI21 = 0.03
+PI23 = 0.04 
 
-PI31 = 0.05
-PI32 = 0.05
+PI31 = 0.03
+PI32 = 0.04
 
 PI_cv_ct_cvh = np.array([[PI11, PI12, PI13], [PI21, PI22, PI23], [PI31, PI32, PI33]])
 
@@ -224,6 +223,11 @@ Ts = np.insert(Ts,0, 0., axis=0)
 x_hat = np.empty((len(trackers), len(Xgt), 5)) 
 prob_hat = np.empty((len(trackers), len(Xgt), 2))
 
+NEES = np.empty((len(trackers), len(Xgt), 1))
+NEESpos = np.empty((len(trackers), len(Xgt), 1))
+NEESvel = np.empty((len(trackers), len(Xgt), 1))
+
+
 for i, (tracker, name) in enumerate(zip(trackers, names)):
     print("Running: ",name)
     for k, (Zk, x_true_k, Tsk) in enumerate(zip(Z, Xgt, Ts)):
@@ -236,9 +240,9 @@ for i, (tracker, name) in enumerate(zip(trackers, names)):
         # You can look at the prediction estimate as well
         tracker_estimate = tracker.estimate(tracker_update)
 
-        NEES[k] = estats.NEES(*tracker_estimate, x_true_k, idxs=np.arange(4))
-        NEESpos[k] = estats.NEES(*tracker_estimate, x_true_k, idxs=np.arange(2))
-        NEESvel[k] = estats.NEES(*tracker_estimate, x_true_k, idxs=np.arange(2, 4))
+        NEES[i][k] = estats.NEES(*tracker_estimate, x_true_k, idxs=np.arange(4))
+        NEESpos[i][k] = estats.NEES(*tracker_estimate, x_true_k, idxs=np.arange(2))
+        NEESvel[i][k] = estats.NEES(*tracker_estimate, x_true_k, idxs=np.arange(2, 4))
 
         tracker_predict_list[i][k]= tracker_predict
         tracker_update_list[i][k] = (tracker_update)
@@ -277,9 +281,15 @@ CI4 = np.array(scipy.stats.chi2.interval(confprob, 4))
 confprob = confprob
 CI2K = np.array(scipy.stats.chi2.interval(confprob, 2 * K)) / K
 CI4K = np.array(scipy.stats.chi2.interval(confprob, 4 * K)) / K
-ANEESpos = np.mean(NEESpos)
-ANEESvel = np.mean(NEESvel)
-ANEES = np.mean(NEES)
+
+ANEESpos = np.empty((len(trackers),1))
+ANEESvel = np.empty((len(trackers),1))
+ANEES = np.empty((len(trackers),1))
+
+for i,_ in enumerate(trackers):
+    ANEESpos[i] = np.mean(NEESpos)
+    ANEESvel[i] = np.mean(NEESvel)
+    ANEES[i] = np.mean(NEES)
 
 # plots
 
@@ -290,9 +300,7 @@ def create_tsk(Ts):
         val += element
         tsk[i] = val
     return tsk
-
 tsk = create_tsk(Ts)
-
 
 # trajectory for EKF-PDA
 
@@ -320,27 +328,27 @@ ax6[0].axis("equal")
 ax6[0].legend(loc='upper left')
 
 
-#plt.close()
-
 # trajectory for IMM-PDA
 
 ax6[1].plot(*Xgt.T[:2], '-', label="$ground  truth$")
 
 axins = zoomed_inset_axes(ax6[1],2,loc=6)
-axins.plot(*Xgt.T[:2], '-', label="$ground  truth$")
-axins.set_title("CVh model should intervene",fontsize=7)
+axins.plot(*Xgt.T[:2], '-')
+axins.scatter(*Z_plot_data.T, color="C1", alpha=0.5, label="measurements")
+
+axins.set_title("gate too big? clutter?",fontsize=7)
 for i, (_, name) in enumerate(zip(trackers, names)):
     if i > 1:
         ax6[1].plot(*x_hat[i].T[:2], '--', label=name)
-        axins.plot(*x_hat[i].T[:2], '--', label=name)
+        axins.plot(*x_hat[i].T[:2], '--')
 
 
-axins.set_xlim([5750,6000])
-axins.set_ylim([1900, 2100])
-mark_inset(ax6[1], axins, loc1=2, loc2=4, fc="none", ec="0.5")
+axins.set_xlim([5700,6050])
+axins.set_ylim([1900, 2200])
+axins.legend(loc='upper left', fontsize=6)
+#mark_inset(ax6[1], axins, loc1=2, loc2=4, fc="none", ec="0.5")
 
 plt.setp(axins, xticks=[], yticks=[])
-#hold('on')
 
 title = ''
 for i,(name) in enumerate(names):
@@ -383,31 +391,104 @@ axs3[1].annotate('strong turn caught by large noise CV model', xy=(152, 0.65), x
 
 
 # NEES
-fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
-axs4[0].plot(tsk, NEESpos)
-print([0, (K - 1) * 2.5], np.repeat(CI2[None], 2, 0))
 
-axs4[0].plot([0, (K - 1) * 2.5], np.repeat(CI2[None], 2, 0), "--r")
+fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
+axs4[0].plot(tsk, NEESpos[0])
+fig4.suptitle('EKF-PDA (CV)')
+axs4[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs4[0].set_ylabel("NEES pos")
-inCIpos = np.mean((CI2[0] <= NEESpos) * (NEESpos <= CI2[1]))
+inCIpos = np.mean((CI2[0] <= NEESpos[0]) * (NEESpos[0] <= CI2[1]))
 axs4[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
 
-axs4[1].plot(tsk, NEESvel)
-axs4[1].plot([0, (K - 1) * 2.5], np.repeat(CI2[None], 2, 0), "--r")
+axs4[1].plot(tsk, NEESvel[0])
+axs4[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs4[1].set_ylabel("NEES vel")
-inCIvel = np.mean((CI2[0] <= NEESvel) * (NEESvel <= CI2[1]))
+inCIvel = np.mean((CI2[0] <= NEESvel[0]) * (NEESvel[0] <= CI2[1]))
 axs4[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
 
-axs4[2].plot(tsk, NEES)
-axs4[2].plot([0, (K - 1) * 2.5], np.repeat(CI4[None], 2, 0), "--r")
+axs4[2].plot(tsk, NEES[0])
+axs4[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
 axs4[2].set_ylabel("NEES")
-inCI = np.mean((CI2[0] <= NEES) * (NEES <= CI2[1]))
+inCI = np.mean((CI2[0] <= NEES[0]) * (NEES[0] <= CI4[1]))
 axs4[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
 
 
-print(f"ANEESpos = {ANEESpos:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
-print(f"ANEESvel = {ANEESvel:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
-print(f"ANEES = {ANEES:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
+#print(f"ANEESpos = {ANEESpos[0]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
+#print(f"ANEESvel = {ANEESvel[0]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
+#print(f"ANEES = {ANEES[0]:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
+
+fig7, axs7 = plt.subplots(3, sharex=True, num=7, clear=True)
+axs7[0].plot(tsk, NEESpos[1])
+
+axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
+axs7[0].set_ylabel("NEES pos")
+inCIpos = np.mean((CI2[0] <= NEESpos[1]) * (NEESpos[1] <= CI2[1]))
+axs7[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
+
+axs7[1].plot(tsk, NEESvel[1])
+axs7[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
+axs7[1].set_ylabel("NEES vel")
+inCIvel = np.mean((CI2[0] <= NEESvel[1]) * (NEESvel[1] <= CI2[1]))
+axs7[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
+
+axs7[2].plot(tsk, NEES[1])
+axs7[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
+axs7[2].set_ylabel("NEES")
+inCI = np.mean((CI2[0] <= NEES[1]) * (NEES[1] <= CI4[1]))
+axs7[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
+fig7.suptitle('EKF-PDA (CT)')
+
+
+#print(f"ANEESpos = {ANEESpos[1]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
+#print(f"ANEESvel = {ANEESvel[1]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
+#print(f"ANEES = {ANEES[1]:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
+
+
+fig7, axs7 = plt.subplots(3, sharex=True, num=8, clear=True)
+axs7[0].plot(tsk, NEESpos[2])
+
+axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
+axs7[0].set_ylabel("NEES pos")
+inCIpos = np.mean((CI2[0] <= NEESpos[2]) * (NEESpos[2] <= CI2[1]))
+axs7[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
+
+axs7[1].plot(tsk, NEESvel[2])
+axs7[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
+axs7[1].set_ylabel("NEES vel")
+inCIvel = np.mean((CI2[0] <= NEESvel[2]) * (NEESvel[2] <= CI2[1]))
+axs7[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
+
+axs7[2].plot(tsk, NEES[2])
+axs7[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
+axs7[2].set_ylabel("NEES")
+inCI = np.mean((CI2[0] <= NEES[2]) * (NEES[2] <= CI4[1]))
+axs7[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
+fig7.suptitle('IMM-PDA (CV-CT)')
+
+##new
+
+
+
+fig7, axs7 = plt.subplots(3, sharex=True, num=9, clear=True)
+axs7[0].plot(tsk, NEESpos[2])
+fig7.suptitle('IMM-PDA (CV-CT-CVhigh)')
+
+axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
+axs7[0].set_ylabel("NEES pos")
+inCIpos = np.mean((CI2[0] <= NEESpos[3]) * (NEESpos[3] <= CI2[1]))
+axs7[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
+
+axs7[1].plot(tsk, NEESvel[3])
+axs7[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
+axs7[1].set_ylabel("NEES vel")
+inCIvel = np.mean((CI2[0] <= NEESvel[3]) * (NEESvel[3] <= CI2[1]))
+axs7[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
+
+axs7[2].plot(tsk, NEES[3])
+axs7[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
+axs7[2].set_ylabel("NEES")
+inCI = np.mean((CI2[0] <= NEES[3]) * (NEES[3] <= CI4[1]))
+axs7[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
 
 
 # errors
