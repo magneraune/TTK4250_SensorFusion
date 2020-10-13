@@ -123,11 +123,11 @@ if play_movie:
 # measurement model
 sigma_z = 30 #10
 clutter_intensity = 5e-6#1e-2
-PD = 0.8 #0.8
+PD = 0.85 #0.8
 gate_size = 4
 
 # dynamic models
-sigma_a_CV = 0.3 #0.5
+sigma_a_CV = 0.5 #0.5
 sigma_a_CV_high = 3
 sigma_a_CT = 2 #0.5
 sigma_omega = 0.00005#0.225#0.3
