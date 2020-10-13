@@ -85,6 +85,7 @@ Z = [zk.T for zk in loaded_data["Z"].ravel()]
 # plot measurements close to the trajectory
 fig1, ax1 = plt.subplots(num=1, clear=True)
 
+
 Z_plot_data = np.empty((0, 2), dtype=float)
 plot_measurement_distance = 45
 for Zk, xgtk in zip(Z, Xgt):
@@ -274,7 +275,7 @@ for i,_ in enumerate(trackers):
 
 
 # consistency
-confprob = 0.95
+confprob = 0.90
 CI2 = np.array(scipy.stats.chi2.interval(confprob, 2))
 CI4 = np.array(scipy.stats.chi2.interval(confprob, 4))
 
@@ -393,50 +394,52 @@ axs3[1].annotate('strong turn caught by large noise CV model', xy=(152, 0.65), x
 # NEES
 
 fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
-axs4[0].plot(tsk, NEESpos[0])
-fig4.suptitle('EKF-PDA (CV)')
+fig4.suptitle('EKF-PDA NEESes with confidence bounds')
+
+axs4[0].plot(tsk, NEESpos[0], label='EKF-PDA (CV)')
 axs4[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs4[0].set_ylabel("NEES pos")
 inCIpos = np.mean((CI2[0] <= NEESpos[0]) * (NEESpos[0] <= CI2[1]))
-axs4[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
+title_NEESpos = (f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
 
-axs4[1].plot(tsk, NEESvel[0])
+axs4[1].plot(tsk, NEESvel[0], label='EKF-PDA (CV)')
 axs4[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs4[1].set_ylabel("NEES vel")
 inCIvel = np.mean((CI2[0] <= NEESvel[0]) * (NEESvel[0] <= CI2[1]))
-axs4[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
+title_NEESvel = (f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
 
-axs4[2].plot(tsk, NEES[0])
+axs4[2].plot(tsk, NEES[0], label='EKF-PDA (CV)')
 axs4[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
 axs4[2].set_ylabel("NEES")
-inCI = np.mean((CI2[0] <= NEES[0]) * (NEES[0] <= CI4[1]))
-axs4[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
+inCI = np.mean((CI4[0] <= NEES[0]) * (NEES[0] <= CI4[1]))
+title_NEES = (f"\n{inCI*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
 
 
 #print(f"ANEESpos = {ANEESpos[0]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
 #print(f"ANEESvel = {ANEESvel[0]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
 #print(f"ANEES = {ANEES[0]:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
 
-fig7, axs7 = plt.subplots(3, sharex=True, num=7, clear=True)
-axs7[0].plot(tsk, NEESpos[1])
+#fig7, axs7 = plt.subplots(3, sharex=True, num=7, clear=True)
+axs4[0].plot(tsk, NEESpos[1], label='EKF-PDA (CT)')
 
-axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
-axs7[0].set_ylabel("NEES pos")
 inCIpos = np.mean((CI2[0] <= NEESpos[1]) * (NEESpos[1] <= CI2[1]))
-axs7[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
 
-axs7[1].plot(tsk, NEESvel[1])
-axs7[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
-axs7[1].set_ylabel("NEES vel")
+title_NEESpos += (f"\n {inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CT)")
+axs4[0].set_title(title_NEESpos)
+
+axs4[1].plot(tsk, NEESvel[1], label='EKF-PDA (CT)')
 inCIvel = np.mean((CI2[0] <= NEESvel[1]) * (NEESvel[1] <= CI2[1]))
-axs7[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
+title_NEESvel += (f"\n{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CT)")
+axs4[1].set_title(title_NEESvel)
 
-axs7[2].plot(tsk, NEES[1])
-axs7[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
-axs7[2].set_ylabel("NEES")
-inCI = np.mean((CI2[0] <= NEES[1]) * (NEES[1] <= CI4[1]))
-axs7[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
-fig7.suptitle('EKF-PDA (CT)')
+axs4[2].plot(tsk, NEES[1], label='EKF-PDA (CT)')
+inCI = np.mean((CI4[0] <= NEES[1]) * (NEES[1] <= CI4[1]))
+title_NEES += (f"\n{inCI*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CT)")
+axs4[2].set_title(title_NEES)
+
+axs4[0].legend(loc="upper left")
+axs4[1].legend(loc="upper left")
+axs4[2].legend(loc="upper left")
 
 
 #print(f"ANEESpos = {ANEESpos[1]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
@@ -444,51 +447,56 @@ fig7.suptitle('EKF-PDA (CT)')
 #print(f"ANEES = {ANEES[1]:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
 
 
-fig7, axs7 = plt.subplots(3, sharex=True, num=8, clear=True)
-axs7[0].plot(tsk, NEESpos[2])
 
-axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
-axs7[0].set_ylabel("NEES pos")
-inCIpos = np.mean((CI2[0] <= NEESpos[2]) * (NEESpos[2] <= CI2[1]))
-axs7[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
-
-axs7[1].plot(tsk, NEESvel[2])
-axs7[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
-axs7[1].set_ylabel("NEES vel")
-inCIvel = np.mean((CI2[0] <= NEESvel[2]) * (NEESvel[2] <= CI2[1]))
-axs7[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
-
-axs7[2].plot(tsk, NEES[2])
-axs7[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
-axs7[2].set_ylabel("NEES")
-inCI = np.mean((CI2[0] <= NEES[2]) * (NEES[2] <= CI4[1]))
-axs7[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
-fig7.suptitle('IMM-PDA (CV-CT)')
 
 ##new
 
+fig7, axs7 = plt.subplots(3, sharex=True, num=8, clear=True)
+axs7[0].plot(tsk, NEESpos[2], label='IMM-PDA (CV-CT)')
 
-
-fig7, axs7 = plt.subplots(3, sharex=True, num=9, clear=True)
-axs7[0].plot(tsk, NEESpos[2])
-fig7.suptitle('IMM-PDA (CV-CT-CVhigh)')
-
-axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
+axs7[0].plot([0, (K - 1) * 3], np.repeat(CI2[None], 2, 0), "--r")
 axs7[0].set_ylabel("NEES pos")
-inCIpos = np.mean((CI2[0] <= NEESpos[3]) * (NEESpos[3] <= CI2[1]))
-axs7[0].set_title(f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI")
+inCIpos = np.mean((CI2[0] <= NEESpos[2]) * (NEESpos[2] <= CI2[1]))
+title_NEESpos2 = (f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT)")
 
-axs7[1].plot(tsk, NEESvel[3])
+axs7[1].plot(tsk, NEESvel[2], label='IMM-PDA (CV-CT)')
 axs7[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs7[1].set_ylabel("NEES vel")
-inCIvel = np.mean((CI2[0] <= NEESvel[3]) * (NEESvel[3] <= CI2[1]))
-axs7[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
+inCIvel = np.mean((CI2[0] <= NEESvel[2]) * (NEESvel[2] <= CI2[1]))
+title_NEESvel2 = (f"\n{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT)")
 
-axs7[2].plot(tsk, NEES[3])
+axs7[2].plot(tsk, NEES[2], label='IMM-PDA (CV-CT)')
 axs7[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
 axs7[2].set_ylabel("NEES")
-inCI = np.mean((CI2[0] <= NEES[3]) * (NEES[3] <= CI4[1]))
-axs7[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
+inCI = np.mean((CI4[0] <= NEES[2]) * (NEES[2] <= CI4[1]))
+title_NEES2 = (f"\n{inCI*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT)")
+
+
+
+
+fig7.suptitle('IMM-PDA NEESes with confidence bounds')
+
+axs7[0].plot(tsk, NEESpos[3], label='IMM-PDA (CV-CT-CVhigh)')
+
+inCIpos = np.mean((CI2[0] <= NEESpos[3]) * (NEESpos[3] <= CI2[1]))
+title_NEESpos2 += (f"\n{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT-CVhigh)")
+axs7[0].set_title(title_NEESpos2)
+
+axs7[1].plot(tsk, NEESvel[3], label='IMM-PDA (CV-CT-CVhigh)')
+inCIvel = np.mean((CI2[0] <= NEESvel[3]) * (NEESvel[3] <= CI2[1]))
+title_NEESvel2 += (f"\n{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT-CVhigh)")
+axs7[1].set_title(title_NEESvel2)
+
+axs7[2].plot(tsk, NEES[3], label='IMM-PDA (CV-CT-CVhigh)')
+inCI = np.mean((CI4[0] <= NEES[3]) * (NEES[3] <= CI4[1]))
+title_NEES2 += (f"\n{inCI*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT-CVhigh)")
+axs7[2].set_title(title_NEES2)
+
+axs7[0].legend(loc="upper left")
+axs7[1].legend(loc="upper left")
+axs7[2].legend(loc="upper left")
+
+
 
 
 # errors
