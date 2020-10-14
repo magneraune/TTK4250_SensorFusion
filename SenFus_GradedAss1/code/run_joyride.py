@@ -83,7 +83,7 @@ Ts = loaded_data["Ts"].squeeze()
 Xgt = loaded_data["Xgt"].T
 Z = [zk.T for zk in loaded_data["Z"].ravel()]
 # plot measurements close to the trajectory
-fig1, ax1 = plt.subplots(num=1, clear=True)
+fig1, ax1 = plt.subplots(num=6, clear=True)
 
 
 Z_plot_data = np.empty((0, 2), dtype=float)
@@ -125,13 +125,13 @@ if play_movie:
 sigma_z = 30 #10
 clutter_intensity = 5e-6#1e-2
 PD = 0.85 #0.8
-gate_size = 4
+gate_size = 3
 
 # dynamic models
 sigma_a_CV = 0.5 #0.5
-sigma_a_CV_high = 3
-sigma_a_CT = 2 #0.5
-sigma_omega = 0.00005#0.225#0.3
+sigma_a_CV_high = 4
+sigma_a_CT = 1 #0.5
+sigma_omega = 0.5*np.pi/180#0.225#0.3
 
 
 # markov chain
@@ -262,8 +262,8 @@ peak_pos_deviation = np.empty((len(trackers),1), dtype=float)
 peak_vel_deviation = np.empty((len(trackers),1), dtype=float)
 
 for i,_ in enumerate(trackers):
-    poserr = np.linalg.norm(x_hat[i,:, :2] - Xgt[:, :2], axis=0)
-    velerr = np.linalg.norm(x_hat[i,:, 2:4] - Xgt[:, 2:4], axis=0)
+    poserr = np.linalg.norm(x_hat[i,:, :2] - Xgt[:, :2], axis=1)
+    velerr = np.linalg.norm(x_hat[i,:, 2:4] - Xgt[:, 2:4], axis=1)
     posRMSE[i] = np.sqrt(
         np.mean(poserr ** 2)
     )  # not true RMSE (which is over monte carlo simulations)
@@ -387,7 +387,7 @@ axs3[1].set_ylim([0, 1])
 axs3[1].set_ylabel("mode probability")
 axs3[1].set_xlabel("time step k")
 
-axs3[1].annotate('strong turn caught by large noise CV model', xy=(152, 0.65), xytext=(160, 0.7), fontsize=12,
+axs3[1].annotate('strong turn caught by large noise CV model', xy=(152, 0.95), xytext=(160, 0.7), fontsize=12,
             arrowprops=dict(facecolor='black', shrink=0.05))
 
 
@@ -454,7 +454,7 @@ axs4[2].legend(loc="upper left")
 fig7, axs7 = plt.subplots(3, sharex=True, num=8, clear=True)
 axs7[0].plot(tsk, NEESpos[2], label='IMM-PDA (CV-CT)')
 
-axs7[0].plot([0, (K - 1) * 3], np.repeat(CI2[None], 2, 0), "--r")
+axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs7[0].set_ylabel("NEES pos")
 inCIpos = np.mean((CI2[0] <= NEESpos[2]) * (NEESpos[2] <= CI2[1]))
 title_NEESpos2 = (f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT)")
@@ -526,6 +526,4 @@ axs5[0][0].legend(loc="upper left")
 axs5[0][1].legend(loc="upper left")
 axs5[1][0].legend(loc="upper left")
 axs5[1][1].legend(loc="upper left")
-
-
 plt.show()
