@@ -87,7 +87,7 @@ fig1, ax1 = plt.subplots(num=6, clear=True)
 
 
 Z_plot_data = np.empty((0, 2), dtype=float)
-plot_measurement_distance = 45
+plot_measurement_distance = 450
 for Zk, xgtk in zip(Z, Xgt):
     to_plot = np.linalg.norm(Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
     Z_plot_data = np.append(Z_plot_data, Zk[to_plot], axis=0)
@@ -123,34 +123,34 @@ if play_movie:
 
 # measurement model
 sigma_z = 30 #10
-clutter_intensity = 5e-6#1e-2
+clutter_intensity = 1e-5#1e-2
 PD = 0.85 #0.8
 gate_size = 3
 
 # dynamic models
 sigma_a_CV = 0.5 #0.5
-sigma_a_CV_high = 4
-sigma_a_CT = 1 #0.5
+sigma_a_CV_high = 3
+sigma_a_CT = 1.2 #0.5
 sigma_omega = 0.5*np.pi/180#0.225#0.3
 
 
 # markov chain
-PI11 = 0.93
-PI22 = 0.93
-PI33 = 0.93
+PI11 = 0.95
+PI22 = 0.95
+PI33 = 0.90
 
 p10 = 0.8  # initvalue for mode probabilities
 
 PI = np.array([[PI11, (1 - PI11)], [(1 - PI22), PI22]])
 
-PI12 = 0.04
-PI13 = 0.03
+PI12 = 0.025
+PI13 = 0.025
 
-PI21 = 0.03
-PI23 = 0.04 
+PI21 = 0.025
+PI23 = 0.025
 
-PI31 = 0.03
-PI32 = 0.04
+PI31 = 0.05
+PI32 = 0.05
 
 PI_cv_ct_cvh = np.array([[PI11, PI12, PI13], [PI21, PI22, PI23], [PI31, PI32, PI33]])
 
@@ -337,7 +337,7 @@ axins = zoomed_inset_axes(ax6[1],2,loc=6)
 axins.plot(*Xgt.T[:2], '-')
 axins.scatter(*Z_plot_data.T, color="C1", alpha=0.5, label="measurements")
 
-axins.set_title("gate too big? clutter?",fontsize=7)
+axins.set_title("zigzag movement",fontsize=7)
 for i, (_, name) in enumerate(zip(trackers, names)):
     if i > 1:
         ax6[1].plot(*x_hat[i].T[:2], '--', label=name)
@@ -385,10 +385,12 @@ axs3[1].legend(triple, three_modes)
 
 axs3[1].set_ylim([0, 1])
 axs3[1].set_ylabel("mode probability")
-axs3[1].set_xlabel("time step k")
+axs3[1].set_xlabel("time [s]")
+axs3[0].set_ylabel("mode probability")
+axs3[0].set_xlabel("time [s]")
 
-axs3[1].annotate('strong turn caught by large noise CV model', xy=(152, 0.95), xytext=(160, 0.7), fontsize=12,
-            arrowprops=dict(facecolor='black', shrink=0.05))
+axs3[1].annotate('strong turn caught by large noise CV model', xy=(453, 0.56), xytext=(160, 0.7), fontsize=12,
+            arrowprops=dict(facecolor='black', shrink=0.15))
 
 
 # NEES
@@ -400,20 +402,20 @@ axs4[0].plot(tsk, NEESpos[0], label='EKF-PDA (CV)')
 axs4[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs4[0].set_ylabel("NEES pos")
 inCIpos = np.mean((CI2[0] <= NEESpos[0]) * (NEESpos[0] <= CI2[1]))
-title_NEESpos = (f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
+title_NEESpos = (f"\n{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
 
 axs4[1].plot(tsk, NEESvel[0], label='EKF-PDA (CV)')
 axs4[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs4[1].set_ylabel("NEES vel")
 inCIvel = np.mean((CI2[0] <= NEESvel[0]) * (NEESvel[0] <= CI2[1]))
-title_NEESvel = (f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
+title_NEESvel = (f"\n{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
 
 axs4[2].plot(tsk, NEES[0], label='EKF-PDA (CV)')
 axs4[2].plot([0, (K - 1) * Ts.mean()], np.repeat(CI4[None], 2, 0), "--r")
 axs4[2].set_ylabel("NEES")
 inCI = np.mean((CI4[0] <= NEES[0]) * (NEES[0] <= CI4[1]))
 title_NEES = (f"\n{inCI*100:.1f}% inside {confprob*100:.1f}% CI for EKF-PDA (CV)")
-
+axs4[2].set_xlabel("time [s]")
 
 #print(f"ANEESpos = {ANEESpos[0]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
 #print(f"ANEESvel = {ANEESvel[0]:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
@@ -457,7 +459,7 @@ axs7[0].plot(tsk, NEESpos[2], label='IMM-PDA (CV-CT)')
 axs7[0].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
 axs7[0].set_ylabel("NEES pos")
 inCIpos = np.mean((CI2[0] <= NEESpos[2]) * (NEESpos[2] <= CI2[1]))
-title_NEESpos2 = (f"{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT)")
+title_NEESpos2 = (f"\n{inCIpos*100:.1f}% inside {confprob*100:.1f}% CI for IMM-PDA (CV-CT)")
 
 axs7[1].plot(tsk, NEESvel[2], label='IMM-PDA (CV-CT)')
 axs7[1].plot([0, (K - 1) * Ts.mean()], np.repeat(CI2[None], 2, 0), "--r")
@@ -497,6 +499,7 @@ axs7[1].legend(loc="upper left")
 axs7[2].legend(loc="upper left")
 
 
+axs7[2].set_xlabel("time [s]")
 
 
 # errors
@@ -513,14 +516,14 @@ for i, (_, name) in enumerate(zip(trackers, names)):
 axs5[0][0].set_title("RMSE for EKF-PDAs")
 axs5[0][0].set_ylabel("position error")
 axs5[1][0].set_ylabel("velocity error")
-axs5[0][0].set_xlabel("time step k")
-axs5[1][0].set_xlabel("time step k")
+axs5[0][0].set_xlabel("time [s]")
+axs5[1][0].set_xlabel("time [s]")
 
 axs5[0][1].set_title("RMSE for IMM-PDAs")
 axs5[0][1].set_ylabel("position error")
 axs5[1][1].set_ylabel("velocity error")
-axs5[0][1].set_xlabel("time step k")
-axs5[1][1].set_xlabel("time step k")
+axs5[0][1].set_xlabel("time [s]")
+axs5[1][1].set_xlabel("time [s]")
 
 axs5[0][0].legend(loc="upper left")
 axs5[0][1].legend(loc="upper left")
